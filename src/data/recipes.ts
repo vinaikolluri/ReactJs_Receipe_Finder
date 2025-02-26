@@ -14,7 +14,7 @@ export interface Recipe {
 export const recipes: Recipe[] = [
   {
     id: 1,
-    name: "Classic Margherita Pizza",
+    name: "Classic Margherita Pizzas",
     description: "A traditional Italian pizza with fresh basil, mozzarella, and tomatoes",
     ingredients: [
       "Pizza dough",
