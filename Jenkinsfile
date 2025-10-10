@@ -30,7 +30,7 @@ pipeline {
             }
         }
 
-        stage('Clone Repository') {
+        stage('Clone git  Repository') {
             steps {
                 echo 'Cloning repository...'
                 git branch: 'vinai', url: 'https://github.com/vinaikolluri/ReactJs_Receipe_Finder.git'
