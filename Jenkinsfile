@@ -1,61 +1,85 @@
 pipeline {
     agent any
 
+   
+
+    environment {
+        S3_BUCKET = "codekerdostest"
+        CLOUDFRONT_ID = "EA4IBJH3S9LRW"
+    }
+
     stages {
-        stage('Setup Environment') {
+
+        stage('Install Tools as Root') {
             steps {
-                echo 'Setting up environment: Installing Node.js, NPM, and Apache HTTPD...'
                 sh '''
-                    # Update system and install prerequisites
-                    sudo yum update -y
-                    sudo yum install -y  httpd
+                sudo yum install -y git unzip
 
-                    # Install NVM (Node Version Manager)
-                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+                cd /tmp
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                unzip -o awscliv2.zip
+                sudo ./aws/install --update
 
-                    # Load NVM for current shell
-                    . "$HOME/.nvm/nvm.sh"
+                curl -fsSL https://rpm.nodesource.com/setup_24.x | sudo bash -
+                sudo yum install -y nodejs
 
-                    # Install Node.js version 22
-                    nvm install 22
-
-                    # Verify installations
-                    node -v
-                    npm -v
-
-                    # Start and enable Apache HTTP Server
-                    sudo systemctl start httpd
-                    sudo systemctl enable httpd
+                git --version
+                aws --version
+                node -v
+                npm -v
                 '''
             }
         }
 
-        stage('Clone git  Repository') {
+        stage('Clone Code') {
             steps {
-                echo 'Cloning repository...'
-                git branch: 'vinai', url: 'https://github.com/vinaikolluri/ReactJs_Receipe_Finder.git'
+                sh '''
+                rm -rf ReactJs_Receipe_Finder
+                git clone -b vinai https://github.com/vinaikolluri/ReactJs_Receipe_Finder.git
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                cd ReactJs_Receipe_Finder
+                npm install
+                '''
             }
         }
 
         stage('Build React App') {
             steps {
-                echo 'Installing dependencies and building the React app...'
                 sh '''
-                    . "$HOME/.nvm/nvm.sh"
-                    npm install
-                    npm run build
+                cd ReactJs_Receipe_Finder
+                npm run build
                 '''
             }
         }
 
-        stage('Deploy to Apache HTTPD') {
+        stage('Upload to S3') {
             steps {
-                echo 'Deploying build files to Apache HTTP Server...'
                 sh '''
-                    sudo rm -rf /var/www/html/*
-                    sudo cp -r dist/* /var/www/html/
+                aws s3 sync ReactJs_Receipe_Finder/dist/ s3://$S3_BUCKET --delete
                 '''
             }
+        }
+
+        stage('CloudFront Invalidation') {
+            steps {
+                sh '''
+                aws cloudfront create-invalidation \
+                  --distribution-id $CLOUDFRONT_ID \
+                  --paths "/*"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful: React app on S3, CloudFront cache cleared"
         }
     }
 }
