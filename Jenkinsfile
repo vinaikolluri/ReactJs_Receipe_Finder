@@ -2,7 +2,6 @@ pipeline {
     agent any
 
    
-
     environment {
         S3_BUCKET = "codekerdostest"
         CLOUDFRONT_ID = "EA4IBJH3S9LRW"
